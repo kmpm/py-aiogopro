@@ -1,0 +1,24 @@
+#editors
+.vscode
+.idea/
+
+#python
+__pycache__/
+*.pyc
+dist/
+*.egg-info
+build/
+.eggs
+
+venv/
+
+#testing stuff
+.tox
+.coverage
+
+
+#media
+tmp/
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[jJ][pP][gG]
