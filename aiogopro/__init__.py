@@ -1,5 +1,1 @@
-
-
-class Camera:
-    def __init__(self):
-        pass
+from aiogopro.camera import Camera
