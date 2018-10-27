@@ -6,15 +6,14 @@ from urllib.parse import urlsplit, unquote
 import posixpath
 import aiohttp
 
-from errors import GoProConnectionError, GoProError, HttpError
+from aiogopro.errors import GoProConnectionError, GoProError, HttpError
 
 
 class AsyncClient:
-    def __init__(self, working_path=None, **kwargs):
+    def __init__(self, **kwargs):
         self._session = None
         self.download_semaphore = asyncio.Semaphore(kwargs.pop('download_semaphore', 4))
         self.chunk_size = kwargs.pop('chunk_size', 64 * 1024)
-        self.working_path = working_path
 
     def session(self):
         if not self._session:
