@@ -1,6 +1,6 @@
 import unittest
 from os import path
-from helpers import load_json
+from tests.helpers import load_json
 
 from aiogopro.schema import SchemaType, schema_compare
 
