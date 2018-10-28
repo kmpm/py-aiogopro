@@ -15,6 +15,7 @@ venv/
 #testing stuff
 .tox
 .coverage
+tests/tmp/
 
 
 #media

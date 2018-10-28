@@ -1,10 +1,11 @@
+from aiogopro.utils import bytes_to_human
 
 
 class CameraInfo:
     def __init__(self, info, **kwargs):
         # firmware_version is not optional
         self.firmware_version = info.get('firmware_version')
-        
+
         for key in info:
             setattr(self, key, info[key])
         # for key, value in kwargs.items():
@@ -12,7 +13,7 @@ class CameraInfo:
 
     def __str__(self):
         msg = "{0}".format(self.firmware_version)
-        
+
         return msg
 
 
