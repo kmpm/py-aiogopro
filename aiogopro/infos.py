@@ -2,7 +2,8 @@ from aiogopro.utils import bytes_to_human
 
 
 class CameraInfo:
-    def __init__(self, info, **kwargs):
+    def __init__(self, camera_type, info, **kwargs):
+        self.camera_type = camera_type
         # firmware_version is not optional
         self.firmware_version = info.get('firmware_version')
 

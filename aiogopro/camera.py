@@ -28,6 +28,16 @@ class Camera:
     async def connect(self, camera='detect'):
         if camera == 'detect':
             self._camera = await self.getCameraInfo()
+        cam = self._camera
+
+        # if it's a session camera we might have to wait some
+        if cam.camera_type == "HX":  # Only session cameras.
+                connectedStatus = False
+                while connectedStatus is False:
+                    json_data = await self._client.getJSON("/gp/gpControl/status")
+                    # json_data["status"]["31"]
+                    if json_data["status"][Status.wireless.app_count.id] >= 1:
+                        connectedStatus = True
 
     async def getCameraInfo(self):
         if self._camera:
@@ -45,20 +55,12 @@ class Camera:
         if not is_usable:
             raise UnsupportedCameraError()
 
-        if camera_type == "HX":  # Only session cameras.
-                connectedStatus = False
-                while connectedStatus is False:
-                    json_data = await self._client.getJSON("/gp/gpControl/status")
-                    # json_data["status"]["31"]
-                    if json_data["status"][Status.wireless.app_count.id] >= 1:
-                        connectedStatus = True
-
         if camera_type == 'HD':
             generation = firmware.split('HD')[1][0]
             if generation < 4:
                 raise UnsupportedCameraError()
 
-        self._camera = CameraInfo(info=data["info"])
+        self._camera = CameraInfo(camera_type, info=data["info"])
 
     async def getMode(self):
         pass
