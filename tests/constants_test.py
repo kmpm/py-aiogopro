@@ -12,4 +12,4 @@ class ConstantsTest(unittest.TestCase):
         self.assertEqual(actual, 'yes')
 
     def test_location(self):
-        self.assertEqual(constants.Status.system.system_busy.location, 'asdf')
+        self.assertEqual(constants.Status.system.system_busy.location, 'aiogopro.types')

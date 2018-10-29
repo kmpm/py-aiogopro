@@ -6584,13 +6584,13 @@
     "info": {
         "ap_has_default_credentials": "0",
         "ap_mac": "d4d9197a079b",
-        "ap_ssid": "PetersHero4",
+        "ap_ssid": "SomeHero4",
         "board_type": "0x05",
         "firmware_version": "HD4.02.05.00.00",
         "git_sha1": "2668038af09452afbc8bb327bf926a2fc6ede6ad",
         "model_name": "HERO4 Black",
         "model_number": 13,
-        "serial_number": "C3121125266863"
+        "serial_number": "C312112526FFFF"
     },
     "modes": [
         {

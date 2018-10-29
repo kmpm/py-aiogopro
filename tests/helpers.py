@@ -1,5 +1,6 @@
 import json
 from os import path, makedirs
+from unittest import mock
 
 THIS_FOLDER = path.dirname(path.realpath(__file__))
 PROJECT_FOLDER = path.abspath(path.join(THIS_FOLDER, '..'))
@@ -19,3 +20,13 @@ def load_json(filename):
 def dump_json(data, filename):
     with open(filename, 'w') as f:
         json.dump(data, f, sort_keys=True, indent=4, ensure_ascii=False)
+
+
+def AsyncMock(*args, **kwargs):
+    m = mock.MagicMock(*args, **kwargs)
+
+    async def mock_coro(*args, **kwargs):
+        return m(*args, **kwargs)
+
+    mock_coro.mock = m
+    return mock_coro

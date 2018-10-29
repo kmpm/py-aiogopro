@@ -7513,7 +7513,7 @@
     "info": {
         "ap_has_default_credentials": "0",
         "ap_mac": "06416996c50c",
-        "ap_ssid": "WsGoPro01",
+        "ap_ssid": "SomeHero7",
         "board_type": "0x05",
         "capabilities": "16",
         "firmware_version": "HD7.01.01.51.00",
@@ -7521,7 +7521,7 @@
         "lens_count": "1",
         "model_name": "HERO7 Black",
         "model_number": 30,
-        "serial_number": "C3281324670022",
+        "serial_number": "C328132467FFFF",
         "update_required": "0"
     },
     "modes": [
