@@ -26,6 +26,7 @@ class GoProBusyError(Exception):
     def __init__(self):
         self.message = "Operation invalid while busy"
 
+
 class CameraIdentificationError(Exception):
     """When camera can not be identified
     ```code``` 500 = some error, 400 = unsupported camera

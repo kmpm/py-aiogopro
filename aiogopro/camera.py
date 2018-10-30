@@ -1,3 +1,4 @@
+import json
 from aiogopro.client import AsyncClient
 from aiogopro.infos import CameraInfo
 from aiogopro.errors import UnsupportedCameraError
@@ -84,6 +85,20 @@ class Camera:
         data = await self._getJSON("/gp/gpControl/status", timeout=5)
         if value:
             return data['status'][value]
+        return data
+
+    async def gpControlCommand(self, cmd, value):
+        if not isinstance(cmd, types.CommandType):
+            raise TypeError()
+
+        url = '/gp/gpControl/{0}'.format(cmd.url)
+        if cmd.widget == 'button':
+            url = '/gp/gpControl{0}?p={1}'.format(cmd.url, value)
+
+        await self.getInfo()
+        data = await self._getText(url, timeout=5)
+        # fix badly formated json
+        data = json.loads(data.replace("\\", "/"))
         return data
 
     async def getMode(self):
