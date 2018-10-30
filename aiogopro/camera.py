@@ -89,11 +89,13 @@ class Camera:
 
     async def gpControlCommand(self, cmd, value):
         if not isinstance(cmd, types.CommandType):
-            raise TypeError()
+            raise TypeError('cmd must instance of CommadType')
 
         url = '/gp/gpControl/{0}'.format(cmd.url)
         if cmd.widget == 'button':
             url = '/gp/gpControl{0}?p={1}'.format(cmd.url, value)
+        else:
+            raise NotImplementedError('Widget {0} is not implemented'.format(cmd.widget))
 
         await self.getInfo()
         data = await self._getText(url, timeout=5)
