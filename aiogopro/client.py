@@ -12,7 +12,7 @@ from aiogopro.errors import GoProConnectionError, GoProError, HttpError
 class AsyncClient:
     def __init__(self, **kwargs):
         self._session = None
-        self.download_semaphore = asyncio.Semaphore(kwargs.pop('download_semaphore', 4))
+        self.semaphores = asyncio.Semaphore(kwargs.pop('semaphores', 2))
         self.chunk_size = kwargs.pop('chunk_size', 64 * 1024)
 
     def session(self):
@@ -27,29 +27,32 @@ class AsyncClient:
 
     async def getText(self, url, timeout=30):
         try:
-            async with self.session().get(url, timeout=timeout) as resp:
-                message = await resp.text(encoding='utf-8')
-                if resp.status == 200:
-                    return message
+            async with self.semaphores:
+                async with self.session().get(url, timeout=timeout) as resp:
+                    message = await resp.text(encoding='utf-8')
 
-                # try to parse json response
-                print('content_type', resp.content_type)
+                    if resp.status == 200:
+                        return message
                 if 'json' in resp.content_type:
                     message = json.loads(message.replace("\r\n", "").replace("\n", ""))
-                    raise GoProError(url, resp.status, resp.reason, message)
-
-        except json.JSONDecodeError:
-            print('error', message)
-            raise HttpError(url, resp.status, resp.reason)
+                    error = GoProError(url, resp.status, resp.reason, message)
+                else:
+                    error = HttpError(url, resp.status, resp.reason)
         except aiohttp.client_exceptions.ClientConnectorError as err:
             raise GoProConnectionError('Can not connect', err)
 
+        raise error
+
     async def getJSON(self, url, timeout=30):
-        async with self.session().get(url, timeout=timeout) as resp:
-            return await resp.json()
+        async with self.semaphores:
+            async with self.session().get(url, timeout=timeout) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    raise HttpError(url, resp.status, resp.reason)
 
     async def download(self, url, filename=None):
-        async with self.download_semaphore:
+        async with self.semaphores:
             if not filename:
                 filename = url2filename(url)
 

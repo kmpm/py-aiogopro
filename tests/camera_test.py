@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 import asyncio
+from yarl import URL
 from aiogopro import Camera, constants, parse_datetime
 from tests.helpers import AsyncMock
 
@@ -37,15 +38,15 @@ class CameraTest(unittest.TestCase):
     def test_connect(self):
         camera = Camera()
         _run(camera.connect())
-        camera._client.getJSON.mock.assert_called_once_with(camera._client, 'http://10.5.5.9/gp/gpControl', timeout=5)
+        camera._client.getJSON.mock.assert_called_once_with(camera._client, URL('http://10.5.5.9/gp/gpControl'), timeout=5)
 
     @mock.patch('aiogopro.camera.AsyncClient.getJSON', new=AsyncMock(side_effect=[hd4.INFO, hd4.STATUS]))
     def test_status(self):
         camera = Camera()
         result = _run(camera.getStatus(constants.Status.setup.date_time))
         calls = [
-            mock.call(camera._client, 'http://10.5.5.9/gp/gpControl', timeout=5),
-            mock.call(camera._client, 'http://10.5.5.9/gp/gpControl/status', timeout=5),
+            mock.call(camera._client, URL('http://10.5.5.9/gp/gpControl'), timeout=5),
+            mock.call(camera._client, URL('http://10.5.5.9/gp/gpControl/status'), timeout=5),
         ]
         camera._client.getJSON.mock.assert_has_calls(calls)
         self.assertEqual(result, '%0F%01%06%04%05%30')
@@ -55,7 +56,7 @@ class CameraTest(unittest.TestCase):
     @mock.patch('aiogopro.camera.AsyncClient.getText', new=AsyncMock(return_value='{}\n'))
     def test_shutter(self):
         camera = Camera()
-        result = _run(camera.gpControlCommand(constants.Command.GPCAMERA_SHUTTER, 0))
-        camera._client.getJSON.mock.assert_called_once_with(camera._client, 'http://10.5.5.9/gp/gpControl', timeout=5)
-        camera._client.getText.mock.assert_called_once_with(camera._client, 'http://10.5.5.9/gp/gpControl/command/shutter?p=0', timeout=5)
+        result = _run(camera.command(constants.Command.GPCAMERA_SHUTTER, 0))
+        camera._client.getJSON.mock.assert_called_once_with(camera._client, URL('http://10.5.5.9/gp/gpControl'), timeout=5)
+        camera._client.getText.mock.assert_called_once_with(camera._client, URL('http://10.5.5.9/gp/gpControl/command/shutter?p=0'), timeout=5)
         self.assertEqual(result, {})

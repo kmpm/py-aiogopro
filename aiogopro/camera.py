@@ -1,8 +1,11 @@
 import json
+from yarl import URL
+
 from aiogopro.client import AsyncClient
 from aiogopro.infos import CameraInfo
 from aiogopro.errors import UnsupportedCameraError
-from aiogopro.constants import Status
+from aiogopro.constants import Status, Command
+import aiogopro.utils as utils
 import aiogopro.types as types
 
 
@@ -19,16 +22,22 @@ class Camera:
         except ImportError:
             self._mac = mac
 
-    async def _getText(self, url, timeout=None):
+    async def _getText(self, url, timeout=None, **kwargs):
         if not self._client:
             self._client = AsyncClient()
         url = "http://{0}{1}".format(self._ip, url)
+
+        # Might be self encoded. Don't mess
+        url = URL(url, encoded=kwargs.pop('encoded', False))
         return await self._client.getText(url, timeout=timeout)
 
-    async def _getJSON(self, url, timeout=None):
+    async def _getJSON(self, url, timeout=None, **kwargs):
         if not self._client:
             self._client = AsyncClient()
         url = "http://{0}{1}".format(self._ip, url)
+
+        # Might be self encoded. Don't mess
+        url = URL(url, encoded=kwargs.pop('encoded', False))
         return await self._client.getJSON(url, timeout=timeout)
 
     async def quit(self):
@@ -87,7 +96,7 @@ class Camera:
             return data['status'][value]
         return data
 
-    async def gpControlCommand(self, cmd, value):
+    async def command(self, cmd, value, **kwargs):
         if not isinstance(cmd, types.CommandType):
             raise TypeError('cmd must instance of CommadType')
 
@@ -98,10 +107,17 @@ class Camera:
             raise NotImplementedError('Widget {0} is not implemented'.format(cmd.widget))
 
         await self.getInfo()
-        data = await self._getText(url, timeout=5)
+        data = await self._getText(url, timeout=5, **kwargs)
         # fix badly formated json
-        data = json.loads(data.replace("\\", "/"))
+        if data:
+            data = json.loads(data.replace("\\", "/"))
         return data
 
-    async def getMode(self):
-        pass
+    async def timeGet(self):
+        dtm = await self.getStatus(Status.setup.date_time)
+        return utils.parse_datetime(dtm)
+
+    async def timeSync(self, value=None):
+        datestr = utils.generate_datetime(value)
+        return await self.command(Command.GPCAMERA_SET_DATE_AND_TIME_ID, datestr, encoded=True)
+
