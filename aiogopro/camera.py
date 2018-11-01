@@ -1,4 +1,5 @@
 import json
+import asyncio
 from yarl import URL
 
 from aiogopro.client import AsyncClient
@@ -7,6 +8,7 @@ from aiogopro.errors import UnsupportedCameraError
 from aiogopro.constants import Status, Command
 import aiogopro.utils as utils
 import aiogopro.types as types
+from aiogopro.protocols import KeepaliveProtocol
 
 
 class Camera:
@@ -59,6 +61,13 @@ class Camera:
                     if json_data["status"][Status.wireless.app_count.id] >= 1:
                         connectedStatus = True
         return camera
+
+    async def keepAlive(self):
+        loop = asyncio.get_event_loop()
+        connect = loop.create_datagram_endpoint(
+            lambda: KeepaliveProtocol(loop),
+            remote_addr=(self.ip, 8554)
+        )
 
     async def getInfo(self):
         if self._camera:
