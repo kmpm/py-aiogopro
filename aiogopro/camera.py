@@ -8,7 +8,7 @@ from aiogopro.errors import UnsupportedCameraError
 from aiogopro.constants import Status, Command
 import aiogopro.utils as utils
 import aiogopro.types as types
-from aiogopro.protocols import KeepaliveProtocol
+from aiogopro.protocols import KeepAliveProtocol
 
 
 class Camera:
@@ -17,6 +17,7 @@ class Camera:
         self._mac = mac
         self._camera = None  # type: CameraInfo
         self._client = None  # type: AsyncClient
+        self._keepAlive = None  # type: KeepAliveProtocol
 
         try:
             from getmac import get_mac_address
@@ -43,6 +44,9 @@ class Camera:
         return await self._client.getJSON(url, timeout=timeout)
 
     async def quit(self):
+        # if self._keepAlive:
+        self._keepAlive.quit()
+
         await self._client.quit()
         self._client = None
 
@@ -64,10 +68,14 @@ class Camera:
 
     async def keepAlive(self):
         loop = asyncio.get_event_loop()
-        connect = loop.create_datagram_endpoint(
-            lambda: KeepaliveProtocol(loop),
-            remote_addr=(self.ip, 8554)
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: KeepAliveProtocol(loop),
+            remote_addr=(self._ip, 8554)
         )
+        print('transport:', transport)
+        print('protocol:', protocol)
+        self._keepAlive = protocol
+        return transport
 
     async def getInfo(self):
         if self._camera:

@@ -16,7 +16,8 @@ setup(
     license='MIT',
     packages=['aiogopro'],
     install_requires=[
-        'aiohttp==3.4.4'
+        'aiohttp==3.4.4',
+        'yarl'
     ],
     test_suite='tests',
     zip_safe=False)
