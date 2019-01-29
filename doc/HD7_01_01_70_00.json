@@ -1,14 +1,14 @@
 {
     "schema_version": 4,
-    "version": 2,
+    "version": 3,
     "info": {
         "ap_has_default_credentials": "0",
         "ap_mac": "06416996ffff",
         "ap_ssid": "SomeHero7",
         "board_type": "0x05",
         "capabilities": "16",
-        "firmware_version": "HD7.01.01.51.00",
-        "git_sha1": "360b5e9e5aeed5e0f8a12c76431d2a7dec3dc4cd",
+        "firmware_version": "HD7.01.01.70.00",
+        "git_sha1": "b29c80591af6b628f0debffdccd8def70e8a696b",
         "lens_count": "1",
         "model_name": "HERO7 Black",
         "model_number": 30,
@@ -819,6 +819,16 @@
         },
         {
             "deprecated": false,
+            "display_name": "Setup secure camera live stream",
+            "key": "GPCAMERA_SECURE_LIVE_STREAM_SETUP",
+            "network_types": [
+                "ble"
+            ],
+            "url": "",
+            "widget_type": "button"
+        },
+        {
+            "deprecated": false,
             "display_name": "Get the auto-connect state of the camera",
             "key": "GPCAMERA_SENSOR_GET_AUTOCONNECT",
             "network_types": [
@@ -1071,6 +1081,16 @@
                 "wifi"
             ],
             "url": "/command/storage/tag_moment",
+            "widget_type": "button"
+        },
+        {
+            "deprecated": false,
+            "display_name": "Enable camera turbo mode",
+            "key": "GPCAMERA_TURBO_MODE_ENABLE",
+            "network_types": [
+                "wifi"
+            ],
+            "url": "",
             "widget_type": "button"
         },
         {
@@ -3610,7 +3630,7 @@
                             "value": 12
                         },
                         {
-                            "display_name": "English - IN",
+                            "display_name": "English - IND",
                             "value": 13
                         }
                     ],
@@ -6751,24 +6771,6 @@
                 }
             ],
             "blacklist": {
-                "setting_id": 109,
-                "values": [
-                    0,
-                    1,
-                    2
-                ]
-            }
-        },
-        {
-            "activated_by": [
-                {
-                    "status_id": 65,
-                    "values": [
-                        1
-                    ]
-                }
-            ],
-            "blacklist": {
                 "setting_id": 31,
                 "values": [
                     1,
@@ -7012,24 +7014,6 @@
                 }
             ],
             "blacklist": {
-                "setting_id": 109,
-                "values": [
-                    0,
-                    1,
-                    2
-                ]
-            }
-        },
-        {
-            "activated_by": [
-                {
-                    "status_id": 65,
-                    "values": [
-                        2
-                    ]
-                }
-            ],
-            "blacklist": {
                 "setting_id": 37,
                 "values": [
                     0,
@@ -7122,22 +7106,6 @@
                 "values": [
                     0,
                     1
-                ]
-            }
-        },
-        {
-            "activated_by": [
-                {
-                    "setting_id": 82,
-                    "setting_value": 1
-                }
-            ],
-            "blacklist": {
-                "setting_id": 109,
-                "values": [
-                    0,
-                    1,
-                    2
                 ]
             }
         },
@@ -10787,6 +10755,10 @@
                     {
                         "id": 46,
                         "name": "video_protune_default"
+                    },
+                    {
+                        "id": 88,
+                        "name": "zoom_while_encoding"
                     }
                 ],
                 "group": "video"
