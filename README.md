@@ -18,3 +18,8 @@ curl http://10.5.5.9/gp/gpControl -o gpcontrol.json
 # optionally, make it pretty
 python ./tools/prettygp.py --replace gpcontrol.json
 ```
+
+## Refresh constants.py from spec
+```bash
+python ./tools/generate_constants.py ./doc/HD7_01_01_70_00.json
+```
