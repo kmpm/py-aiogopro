@@ -4,23 +4,25 @@ Python async I/O GoPro module
 __Requires Python >= 3.6__
 Only tested with Hero 4 Black and above
 
-# Develop
-```bash
-clone py-aiogopro
-cd py-aiogopro
-python3 -m venv venv
-source venv\bin\activate
-pip install -e .
-```
 
-## Download json spec from camera
-```bash
-curl http://10.5.5.9/gp/gpControl -o gpcontrol.json
-# optionally, make it pretty
-python ./tools/prettygp.py --replace gpcontrol.json
-```
+# Example
 
-## Refresh constants.py from spec
-```bash
-python ./tools/generate_constants.py ./doc/HD7_01_01_70_00.json
+```python
+import asyncio
+from aiogopro import Camera, constants
+camera = Camera()
+
+async def run():
+    print('connecting')
+    print(await camera.connect())
+    print('internal_battery_level:', await camera.getStatus(constants.Status.System.internal_battery_level))
+    print('ap_ssid:', await camera.getStatus(constants.Status.Wireless.ap_ssid))
+    print('date_time:', await camera.timeGet())
+    print('time sync:', await camera.timeSync())
+    await asyncio.sleep(1)
+    print('date_time:', await camera.timeGet())
+    await camera.quit()
+
+asyncio.get_event_loop().run_until_complete(run())
+print("Done")
 ```
