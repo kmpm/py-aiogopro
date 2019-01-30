@@ -8,7 +8,7 @@ from aiogopro import utils, types, parsers
 from aiogopro.client import AsyncClient
 from aiogopro.infos import CameraInfo
 from aiogopro.errors import CameraUnsupportedError, CameraBusyError
-from aiogopro.constants import Status, Command, Mode, SubMode
+from aiogopro.constants import Status, Command, Mode, SubMode, MultiShot
 from aiogopro.protocols import KeepAliveProtocol
 
 
@@ -53,7 +53,7 @@ class Camera:
 
     async def connect(self, camera='detect'):
         if camera == 'detect':
-            self._camera = await self.getInfo()
+            self._camera = await self.get_info()
 
         camera = self._camera
 
@@ -78,7 +78,14 @@ class Camera:
         self._keepAlive = protocol
         return transport
 
-    async def getInfo(self):
+    async def set_setting(self, param, value):
+        param = utils.get_value(param)
+        value = utils.get_value(value)
+        return await self._client.getText(
+            'http://' + self._ip + '/gp/gpControl/setting/' + param + '/' + value, timeout=5
+        )
+
+    async def get_info(self):
         if self._camera:
             return self._camera
 
@@ -103,7 +110,7 @@ class Camera:
         self._camera = ci
         return ci
 
-    async def getStatus(self, key=None):
+    async def get_status(self, key=None):
         """Fetches all or parts of camera status
         Parameters
         ----------
@@ -116,7 +123,7 @@ class Camera:
             value = key.id
         else:
             value = key
-        await self.getInfo()
+        await self.get_info()
         data = await self._getJSON("/gp/gpControl/status", timeout=5)
         if value:
             return data['status'][value]
@@ -151,7 +158,7 @@ class Camera:
         else:
             raise NotImplementedError(f'Widget `{cmd.widget}` is not implemented')
 
-        await self.getInfo()
+        await self.get_info()
         data = await self._getText(url, timeout=5, **kwargs)
         # fix badly formated json
         if data:
@@ -159,7 +166,7 @@ class Camera:
         return data
 
     async def timeGet(self):
-        dtm = await self.getStatus(Status.Setup.date_time)
+        dtm = await self.get_status(Status.Setup.date_time)
         return utils.parse_datetime(dtm)
 
     async def timeSync(self, value=None):
@@ -192,6 +199,7 @@ class Camera:
         value : '0' | '1'
             Shutter on or off
         """
+        print('shutter', value)
         return await self.command(Command.GPCAMERA_SHUTTER, value)
 
     async def list_media(self):
@@ -203,31 +211,113 @@ class Camera:
         v = content[-1]  # last file
         return v.path
 
-    async def is_recording(self):
-        value = await self.getStatus(Status.System.system_busy)
-        print('is_recording=', value)
+    async def is_busy(self):
+        """Check if camera is busy
+        Returns
+        -------
+        bool
+            True if busy
+        """
+        value = await self.get_status(Status.System.system_busy)
         return value == 1
 
+    async def ensureAvailable(self):
+        busy = await self.is_busy()
+        while busy:
+            asyncio.sleep(1)
+            busy = await self.is_busy()
+
+
     async def dowload_media(self, path, destination=None):
-        if await self.is_recording():
+        if await self.is_busy():
             raise CameraBusyError()
         url = f'http://{self._ip}:8080/videos/DCIM/{path}'
         return await self._client.download(url, destination)
 
-    async def take_photo(self):
-        """Helper for taking single photo
+    async def download_all(self, destination=None):
+        """Downloads all media to destination folder
+        Parameters
+        ----------
+        destination : string, optional
+            Directory in where to create files. Defaults to cwd.
+            Will be created if missing.
+        """
+        if await self.is_busy():
+            raise CameraBusyError()
+        files = await self.list_media()
+        media_stash = []
+        tasks = []
+        if destination and destination[-1] in ['/', '\\']:
+            destination = destination[:-1]
+
+        for fil in files:
+            url = f'http://{self._ip}:8080/videos/DCIM/{fil.path}'
+            newname = f'{fil.directory}-{fil.name}'
+            newpath = f'{destination or "."}/{newname}'
+            media_stash.append(newpath)
+            tasks.append(self._client.download(url, f'{fil.directory}-{fil.name}', working_path=destination))
+        await asyncio.gather(*tasks)
+        return media_stash
+
+    async def capture(self, resetafter=0):
+        """Helper for capturing
+        You have to set proper mode first
+
+        Parameters
+        ----------
+        resetafter: int
+            Seconds after which shutter will be set to 0. (default 0 = disabled)
+
         Returns
         -------
         string
             directory/filename of the last captured
         """
-        await self.mode(Mode.photo, SubMode.Photo.single)
+        if await self.is_busy():
+            raise CameraBusyError()
 
         await self.shutter(1)
-        await asyncio.sleep(1)
-        busy = await self.is_recording()
-        while busy:
-            await asyncio.sleep(1)
-            busy = await self.is_recording()
+        if resetafter > 0:
+            await asyncio.sleep(resetafter)
+            return await self.shutter(0)
 
+        await asyncio.sleep(1)
+        await self.ensureAvailable()  # wait until camera is available
         return await self.get_last_media()
+
+    async def take_photo(self, resetafter=0):
+        """Helper for taking single photo
+
+        Parameters
+        ----------
+        resetafter: int
+            Seconds after which shutter will be set to 0. (default 0 = disabled)
+
+        Returns
+        -------
+        string
+            directory/filename of the last captured
+        """
+        if await self.is_busy():
+            raise CameraBusyError()
+
+        await self.mode(Mode.photo, SubMode.Photo.single)
+        return self.capture(resetafter)
+
+    async def delete(self, option):
+        if isinstance(option, int):
+            # This allows you to delete x number of files backwards.
+            # Will delete a timelapse/burst entirely as its interpreted as a single file.
+            tasks = []
+            for _ in range(option):
+                tasks.append(self.command(Command.GPCAMERA_DELETE_LAST_FILE_ID))
+            return await asyncio.gather(tasks)
+        elif isinstance(option, str):
+            if option == 'all':
+                return await self.command(Command.GPCAMERA_DELETE_ALL_FILES_ID)
+            raise ValueError('Option did not contain a permitted value')
+        else:
+            raise TypeError('Option is of wrong type')
+
+    async def delete_file(self, directory, fil):
+        return await self.command(Command.GPCAMERA_DELETE_FILE_ID, f'{directory}/{fil}')

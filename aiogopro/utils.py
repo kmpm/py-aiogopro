@@ -1,4 +1,5 @@
 import math
+import os
 from datetime import datetime
 
 
@@ -42,3 +43,30 @@ def generate_datetime(value=None):
         value.second,
         extra
     ).lower()
+
+
+def pad_sep(text):
+    if text[-1] != os.path.sep:
+        return text + os.path.sep
+    return text
+
+
+def strip_sep(text):
+    if text[-1] in ['/', '\\']:
+        return text[:-1]
+    return text
+
+
+def ensure_dir(file_path):
+    file_path = pad_sep(file_path)
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def get_value(data):
+    """Returns the value of an Enum or data
+    """
+    if hasattr(data, 'value'):
+        return data.value
+    return data

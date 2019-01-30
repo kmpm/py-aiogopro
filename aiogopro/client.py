@@ -6,6 +6,7 @@ from urllib.parse import urlsplit, unquote
 import posixpath
 import aiohttp
 
+from aiogopro.utils import ensure_dir
 from aiogopro.errors import GoProConnectionError, GoProError, HttpError
 
 
@@ -14,7 +15,6 @@ class AsyncClient:
         self._session = None
         self.semaphores = asyncio.Semaphore(kwargs.pop('semaphores', 2))
         self.chunk_size = kwargs.pop('chunk_size', 64 * 1024)
-        self.working_path = kwargs.pop('working_path', getcwd())
 
     def session(self):
         if not self._session:
@@ -52,13 +52,16 @@ class AsyncClient:
                 else:
                     raise HttpError(url, resp.status, resp.reason)
 
-    async def download(self, url, filename=None):
+    async def download(self, url, filename=None, **kwargs):
         async with self.semaphores:
             if not filename:
                 filename = url2filename(url)
 
-            if self.working_path:
-                filename = path.join(self.working_path, filename)
+            working_path = kwargs.pop('working_path', getcwd())
+
+            if working_path:
+                ensure_dir(working_path)
+                filename = path.join(working_path, filename)
 
             async with self.session().get(url) as resp:
                 with open(filename, 'wb') as fd:
@@ -67,6 +70,7 @@ class AsyncClient:
                         if not chunk:
                             break
                         fd.write(chunk)
+            return filename
 
 
 def url2filename(url):
