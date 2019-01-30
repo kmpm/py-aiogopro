@@ -6,7 +6,8 @@ with open("README.md", "r") as fh:
 
 setup(
     name='aiogopro',
-    version='0.0.1a1',
+    python_requires='>3.6.0',
+    version='0.0.1a2',
     description='some kind of asyncio library for GoPro',
     url='http://github.com/kmpm/py-aiogopro',
     long_description=long_description,
