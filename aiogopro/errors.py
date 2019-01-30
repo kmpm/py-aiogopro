@@ -22,7 +22,7 @@ class GoProError(HttpError):
         self.message = "GoPro Error"
 
 
-class GoProBusyError(Exception):
+class CameraBusyError(Exception):
     def __init__(self):
         self.message = "Operation invalid while busy"
 
@@ -39,6 +39,6 @@ class CameraIdentificationError(Exception):
             self.message += ': ' + str(inner_exception)
 
 
-class UnsupportedCameraError(CameraIdentificationError):
+class CameraUnsupportedError(CameraIdentificationError):
     def __init__(self):
         super().__init__('Unsupported Camera', 400)

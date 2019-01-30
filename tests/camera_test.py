@@ -43,7 +43,7 @@ class CameraTest(unittest.TestCase):
     @mock.patch('aiogopro.camera.AsyncClient.getJSON', new=AsyncMock(side_effect=[hd4.INFO, hd4.STATUS]))
     def test_status(self):
         camera = Camera()
-        result = _run(camera.getStatus(constants.Status.setup.date_time))
+        result = _run(camera.getStatus(constants.Status.Setup.date_time))
         calls = [
             mock.call(camera._client, URL('http://10.5.5.9/gp/gpControl'), timeout=5),
             mock.call(camera._client, URL('http://10.5.5.9/gp/gpControl/status'), timeout=5),

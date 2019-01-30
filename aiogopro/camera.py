@@ -1,13 +1,14 @@
+# Copyright (c) 2018 Peter Magnusson
 import json
 import asyncio
+
 from yarl import URL
 
+from aiogopro import utils, types, parsers
 from aiogopro.client import AsyncClient
 from aiogopro.infos import CameraInfo
-from aiogopro.errors import UnsupportedCameraError
-from aiogopro.constants import Status, Command
-import aiogopro.utils as utils
-import aiogopro.types as types
+from aiogopro.errors import CameraUnsupportedError, CameraBusyError
+from aiogopro.constants import Status, Command, Mode, SubMode
 from aiogopro.protocols import KeepAliveProtocol
 
 
@@ -44,8 +45,8 @@ class Camera:
         return await self._client.getJSON(url, timeout=timeout)
 
     async def quit(self):
-        # if self._keepAlive:
-        self._keepAlive.quit()
+        if self._keepAlive:
+            self._keepAlive.quit()
 
         await self._client.quit()
         self._client = None
@@ -62,7 +63,7 @@ class Camera:
                 while connectedStatus is False:
                     json_data = await self._getJSON("/gp/gpControl/status")
                     # json_data["status"]["31"]
-                    if json_data["status"][Status.wireless.app_count.id] >= 1:
+                    if json_data["status"][Status.Wireless.app_count.id] >= 1:
                         connectedStatus = True
         return camera
 
@@ -72,8 +73,8 @@ class Camera:
             lambda: KeepAliveProtocol(loop),
             remote_addr=(self._ip, 8554)
         )
-        print('transport:', transport)
-        print('protocol:', protocol)
+        # print('transport:', transport)
+        # print('protocol:', protocol)
         self._keepAlive = protocol
         return transport
 
@@ -91,18 +92,26 @@ class Camera:
                 camera_type = camera
                 break
         if not is_usable:
-            raise UnsupportedCameraError()
+            raise CameraUnsupportedError()
 
         if camera_type == 'HD':
             generation = int(firmware.split('HD')[1][0])
             if generation < 4:
-                raise UnsupportedCameraError()
+                raise CameraUnsupportedError()
 
         ci = CameraInfo(camera_type, info=data["info"])
         self._camera = ci
         return ci
 
     async def getStatus(self, key=None):
+        """Fetches all or parts of camera status
+        Parameters
+        ----------
+        key : int | StatusType, optional
+            Key of the status value to get.
+            Defaults to None which will return raw status.
+        """
+
         if isinstance(key, types.StatusType):
             value = key.id
         else:
@@ -113,15 +122,34 @@ class Camera:
             return data['status'][value]
         return data
 
-    async def command(self, cmd, value, **kwargs):
+    async def command(self, cmd, param=None, **kwargs):
+        """Sends a command to camera
+        Parameters
+        ----------
+        cmd : CommandType
+            Which command do you want to execute
+        param : value | dict
+            If single value it will be added to the ?p= parameter.
+            Generates a querystring from dict.
+        **kwargs :
+            will be passed on to #_getText
+        """
         if not isinstance(cmd, types.CommandType):
             raise TypeError('cmd must instance of CommadType')
 
-        url = '/gp/gpControl/{0}'.format(cmd.url)
+        url = f'/gp/gpControl/{cmd.url}'
         if cmd.widget == 'button':
-            url = '/gp/gpControl{0}?p={1}'.format(cmd.url, value)
+            if isinstance(param, dict):
+                url = f'/gp/gpControl{cmd.url}?'
+                for k, v in param.items():
+                    url += f'{k}={v}&'
+
+                if url.endswith('&'):
+                    url = url[:-1]
+            elif param is not None:
+                url = f'/gp/gpControl{cmd.url}?p={param}'
         else:
-            raise NotImplementedError('Widget {0} is not implemented'.format(cmd.widget))
+            raise NotImplementedError(f'Widget `{cmd.widget}` is not implemented')
 
         await self.getInfo()
         data = await self._getText(url, timeout=5, **kwargs)
@@ -131,10 +159,75 @@ class Camera:
         return data
 
     async def timeGet(self):
-        dtm = await self.getStatus(Status.setup.date_time)
+        dtm = await self.getStatus(Status.Setup.date_time)
         return utils.parse_datetime(dtm)
 
     async def timeSync(self, value=None):
         datestr = utils.generate_datetime(value)
         return await self.command(Command.GPCAMERA_SET_DATE_AND_TIME_ID, datestr, encoded=True)
 
+    async def mode(self, mode, submode=0):
+        """Helper for changing camera mode using GPCAMERA_SUBMODE command
+        Parameters
+        ----------
+        mode : Enum|integer|string
+            Primary mode
+        submode : Enum|integer|string, optional
+            Submode, defaults to 0
+        """
+        mode_value = mode
+        submode_value = submode
+        if hasattr(mode_value, 'value'):
+            mode_value = mode_value.value
+        if hasattr(submode_value, 'value'):
+            submode_value = submode_value.value
+
+        # print(self.gpControlCommand("sub_mode?mode=" + mode + "&sub_mode=" + submode))
+        return await self.command(Command.GPCAMERA_SUBMODE, {'mode': mode_value, 'sub_mode': submode_value})
+
+    async def shutter(self, value):
+        """Helper for GPCAMERA_SHUTTER command
+        Parameters
+        ----------
+        value : '0' | '1'
+            Shutter on or off
+        """
+        return await self.command(Command.GPCAMERA_SHUTTER, value)
+
+    async def list_media(self):
+        json_data = await self._getJSON(Command.GPCAMERA_MEDIA_LIST.url)
+        return parsers.media_list(json_data)
+
+    async def get_last_media(self):
+        content = await self.list_media()
+        v = content[-1]  # last file
+        return v.path
+
+    async def is_recording(self):
+        value = await self.getStatus(Status.System.system_busy)
+        print('is_recording=', value)
+        return value == 1
+
+    async def dowload_media(self, path, destination=None):
+        if await self.is_recording():
+            raise CameraBusyError()
+        url = f'http://{self._ip}:8080/videos/DCIM/{path}'
+        return await self._client.download(url, destination)
+
+    async def take_photo(self):
+        """Helper for taking single photo
+        Returns
+        -------
+        string
+            directory/filename of the last captured
+        """
+        await self.mode(Mode.photo, SubMode.Photo.single)
+
+        await self.shutter(1)
+        await asyncio.sleep(1)
+        busy = await self.is_recording()
+        while busy:
+            await asyncio.sleep(1)
+            busy = await self.is_recording()
+
+        return await self.get_last_media()

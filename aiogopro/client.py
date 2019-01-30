@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from os import path
+from os import path, getcwd
 from urllib.parse import urlsplit, unquote
 import posixpath
 import aiohttp
@@ -14,6 +14,7 @@ class AsyncClient:
         self._session = None
         self.semaphores = asyncio.Semaphore(kwargs.pop('semaphores', 2))
         self.chunk_size = kwargs.pop('chunk_size', 64 * 1024)
+        self.working_path = kwargs.pop('working_path', getcwd())
 
     def session(self):
         if not self._session:

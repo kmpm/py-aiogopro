@@ -19,9 +19,7 @@ class TestSchema(unittest.TestCase):
         data = load_json(path.join(DOC_FOLDER, 'HD7_01_01_51_00.json'))
         p = SchemaType.parse(data)
         self.assertEqual(p.schema_version, 4, 'expected schema_version=4')
-        self.assertEqual(p.version, 2.0, 'expected version=2.0')
-        self.assertIsInstance(p.version, float)
-        self.assertIsInstance(p.schema_version, int)
+        self.assertEqual(p.version, 2, 'expected version=2')
         self.assertEqual(len(p.commands.keys()), 88)
         self.assertEqual(len(p.modes.keys()), 7)
 

@@ -1,8 +1,89 @@
 from datetime import datetime
+from collections import namedtuple
+import re
 
-from aiogopro.types import CommandType, StatusType, ModeType
+
+from aiogopro.types import CommandType, StatusType
 
 RESERVED_WORDS = ['type', 'class']
+T1 = ' ' * 4
+T2 = T1 * 2
+T3 = T1 * 3
+T4 = T1 * 4
+
+
+SUBMODE_PREFIX = {
+    'resolution': 'res_',
+    'aspect_ratio': 'aspect_',
+    'fps': 'Fps_',
+    'looping': 'Time_',
+    'protune_white_balance': 'color_',
+    'protune_iso': 'iso_',
+    'protune_iso_min': 'iso_',
+    'protune_exposure_time': 'time_',
+    'capture_delay': 'delay_',
+    'burst_rate': 'rate_',
+    'timelapse_rate': 'rate_',
+    'nightlapse_rate': 'rate_',
+    'short_clip_length': 'length_',
+    'protune_ev': 'ev_',
+    'timewarp_speed': 'speed_',
+    'exposure_time': 'time_',
+    'record_resolution': 'r_',
+    'record_fps': 'fps_',
+    'window_size': 'size_',
+    'bit_rate': 'rate_',
+    'lcd_sleep': 'sleep_',
+    'auto_power_down': 'off_',
+    'gop_size': 'size_',
+    'idr_interval': 'interval_',
+    'stream_bit_rate': 'rate_',
+    'stream_window_size': 'size_',
+    'stream_gop_size': 'size_',
+    'stream_idr_interval': 'interval_',
+    'lcd_brightness_v2': 'percent_'
+}
+
+rx_replace1 = re.compile(r'([\.])')
+rx_replace2 = re.compile(r'([_]{2,})')
+rx_remove = re.compile(r'([%])')
+
+
+def filterbyvalue(seq, value):
+    for el in seq:
+        if el.attribute == value:
+            yield el
+
+
+def dictToObject(d, name):
+    if not isinstance(d, dict):
+        return d
+    for k, v in d.copy().items():
+        if isinstance(v, dict):
+            d[k] = dictToObject(v, f"{capitalize(k)}Type")
+        elif isinstance(v, list):
+            d[k] = list(map(lambda x: dictToObject(x, f"{capitalize(k)}List"), v))
+    return namedtuple(name, d.keys())(*d.values())
+
+
+def pythonify(text):
+    s = str(text).lower().replace(' ', '_')
+    s = s.replace('-', '_neg_').replace('+', '_plus_')
+    s = s.replace(':', 'to')  # a ratio is always TO
+    s = s.replace('/', '_in_')
+    s = rx_remove.sub('', s)
+    s = rx_replace1.sub('_', s)
+    s = rx_replace2.sub('_', s)
+    return s
+
+
+def capitalize(text):
+    s = str(text).replace(' ', '_').split('_')
+    regex = re.compile(r'([\/:])')
+    for index in range(len(s)):
+        s[index] = regex.sub('_', s[index]).capitalize()
+        s[index] = s[index].replace('.', '').replace('-', 'Neg').replace('%', '')
+    return ''.join(s)
 
 
 def prefix_reserved(value, prefix):
@@ -33,7 +114,7 @@ class SchemaType(object):
 
     def addMode(self, mode):
         key = mode['path_segment']
-        self.modes[key] = ModeType(key, mode['value'], mode['display_name'])
+        self.modes[key] = dictToObject(mode, 'ModeType')
 
     def addStatus(self, groupname, field):
         group = self.status.get(groupname, {})
@@ -47,8 +128,9 @@ class SchemaType(object):
         for cmd in data['commands']:
             parser.addCommand(cmd)
 
-        for mode in data['modes']:
-            parser.addMode(mode)
+        if data['modes']:
+            for mode in data['modes']:
+                parser.addMode(mode)
 
         for group in data['status']['groups']:
             for field in group['fields']:
@@ -70,7 +152,7 @@ def schema_pythonify(schema, filename):
     status.append('class Status(object):')
     extra = ''
     for groupname in schema.status.keys():
-        status.append('{1}    class {0}(object):'.format(groupname, extra))
+        status.append(f'{extra}    class {capitalize(groupname)}(object):')
         for key, field in schema.status[groupname].items():
             status.append(f'        {prefix_reserved(field.name, groupname)} = StatusType("{field.name}", {field.id})')
         extra = '\n'
@@ -91,12 +173,51 @@ def schema_pythonify(schema, filename):
             cmd.display_name
         ))
 
+    # Modes
+    # types.append('ModeType')
+    mode = ['\n\n']
+    othermode = []
+    extra = False
+    mode.append('class Mode(Enum):')
+    submode = [f'\n\nclass SubMode(object):']
+    for k, v in schema.modes.items():
+        mode.append(f"{T1}{pythonify(k)} = '{v.value}'")
+        if v.settings:
+            # default settings
+            defaults = [x for x in v.settings if x.path_segment == 'default_sub_mode']
+            if len(defaults) > 0:
+                submode.append(f"\n{T1}class {capitalize(k)}(Enum):")
+            for sm in defaults:
+                prefix = ''
+                if sm.path_segment in SUBMODE_PREFIX:
+                    prefix = SUBMODE_PREFIX[sm.path_segment]
+                for o in sm.options:
+                    submode.append(f"{T2}{pythonify(prefix + o.display_name)} = '{o.value}'")
+
+            # non default settings
+            others = [x for x in v.settings if x.path_segment != 'default_sub_mode']
+            if len(others) > 0:
+                othermode.append(f'\n\nclass {capitalize(k)}(object):')
+                for sm in others:
+                    othermode.append(f"\n{T1}{capitalize(sm.path_segment).upper()} = '{sm.id}'")
+                    othermode.append(f"\n{T1}class {capitalize(sm.path_segment)}(Enum):")
+                    prefix = ''
+                    if sm.path_segment in SUBMODE_PREFIX:
+                        prefix = SUBMODE_PREFIX[sm.path_segment]
+                    for o in sm.options:
+                        othermode.append(f"{T2}{pythonify(prefix + o.display_name)} = '{o.value}'")
+
+    mode = mode + submode + othermode
+
     # finalize
     lines = []
+    header.append("from enum import Enum")
     header.append("from aiogopro.types import {0}".format(", ".join(types)))
     lines.append("\n".join(header))
     lines.append("\n".join(status))
     lines.append("\n".join(command))
+    lines.append("\n".join(mode))
+
     lines.append("\n")
     with open(filename, 'w') as f:
         f.writelines(lines)

@@ -9,6 +9,7 @@ dist/
 *.egg-info
 build/
 .eggs
+.pytest_cache
 
 venv/
 

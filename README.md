@@ -1,7 +1,8 @@
 Python async I/O GoPro module
 =============================
 
-
+__Requires Python >= 3.6__
+Only tested with Hero 4 Black and above
 
 # Develop
 ```bash
