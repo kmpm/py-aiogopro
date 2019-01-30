@@ -12,6 +12,11 @@ setup(
     url='http://github.com/kmpm/py-aiogopro',
     long_description=long_description,
     long_description_content_type="text/markdown",
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+    ],
     author='Peter Magnusson',
     author_email='peter@birchroad.net',
     license='MIT',
