@@ -7,7 +7,7 @@ import posixpath
 import aiohttp
 
 from aiogopro.utils import ensure_dir
-from aiogopro.errors import GoProConnectionError, GoProError, HttpError
+from aiogopro.errors import CameraConnectionError, CameraError, HttpError
 
 
 class AsyncClient:
@@ -36,11 +36,11 @@ class AsyncClient:
                         return message
                 if 'json' in resp.content_type:
                     message = json.loads(message.replace("\r\n", "").replace("\n", ""))
-                    error = GoProError(url, resp.status, resp.reason, message)
+                    error = CameraError(url, resp.status, resp.reason, message)
                 else:
                     error = HttpError(url, resp.status, resp.reason)
         except aiohttp.client_exceptions.ClientConnectorError as err:
-            raise GoProConnectionError('Can not connect', err)
+            raise CameraConnectionError('Can not connect', err)
 
         raise error
 
