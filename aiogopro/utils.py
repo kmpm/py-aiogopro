@@ -5,6 +5,10 @@ from datetime import datetime
 
 def bytes_to_human(value):
     """Generates a human readable value from bytes
+    Properties
+    ----------
+    value : int
+        integer representing number of bytes
     """
     if isinstance(value, str):
         value = float(value)
@@ -59,9 +63,9 @@ def strip_sep(text):
 
 def ensure_dir(file_path):
     file_path = pad_sep(file_path)
-    directory = os.path.dirname(file_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    folder = os.path.dirname(file_path)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 
 def get_value(data):

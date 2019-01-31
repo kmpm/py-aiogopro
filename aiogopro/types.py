@@ -1,15 +1,34 @@
+from .utils import bytes_to_human
+
+
+def intif(value):
+    """Parse as int if string
+    """
+    try:
+        return int(value, 10)
+    except TypeError:
+        return value
+
 
 class MediaEntry(object):
-    def __init__(self, directory, name, created, modified, size):
-        self.directory = directory
+    def __init__(self, folder, name, **kwargs):
+        self.folder = folder
         self.name = name
-        self.created = created
-        self.modified = modified
-        self.size = size
+        self.created = intif(kwargs.pop('created', kwargs.pop('cre', 0)))
+        self.modified = intif(kwargs.pop('modified', kwargs.pop('mod', 0)))
+        self.size = intif(kwargs.pop('size', kwargs.pop('s', 0)))
+        self.group = kwargs.pop('g', None)
 
     @property
     def path(self):
-        return f'{self.directory}/{self.name}'
+        return f'{self.folder}/{self.name}'
+
+    @property
+    def size_readable(self):
+        return bytes_to_human(self.size)
+
+    def __repr__(self):
+        return f'<MediaEntry path:{self.path}, size:{self.size_readable}>'
 
 
 class CommandType(object):

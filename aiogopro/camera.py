@@ -8,7 +8,7 @@ from aiogopro import utils, types, parsers
 from aiogopro.client import AsyncClient
 from aiogopro.infos import CameraInfo
 from aiogopro.errors import CameraUnsupportedError, CameraBusyError
-from aiogopro.constants import Status, Command, Mode, SubMode, MultiShot
+from aiogopro.constants import Status, Command, Mode, SubMode
 from aiogopro.protocols import KeepAliveProtocol
 
 
@@ -200,7 +200,12 @@ class Camera:
             Shutter on or off
         """
         print('shutter', value)
-        return await self.command(Command.GPCAMERA_SHUTTER, value)
+        if value == 1:
+            return await self.command(Command.GPCAMERA_SHUTTER, value)
+        if value == 0:
+            result = await self.command(Command.GPCAMERA_SHUTTER, value)
+            await self.ensureAvailable()
+            return result
 
     async def list_media(self):
         json_data = await self._getJSON(Command.GPCAMERA_MEDIA_LIST.url)
@@ -239,7 +244,7 @@ class Camera:
         Parameters
         ----------
         destination : string, optional
-            Directory in where to create files. Defaults to cwd.
+            Folder in where to create files. Defaults to cwd.
             Will be created if missing.
         """
         if await self.is_busy():
@@ -252,33 +257,33 @@ class Camera:
 
         for fil in files:
             url = f'http://{self._ip}:8080/videos/DCIM/{fil.path}'
-            newname = f'{fil.directory}-{fil.name}'
+            newname = f'{fil.folder}-{fil.name}'
             newpath = f'{destination or "."}/{newname}'
             media_stash.append(newpath)
-            tasks.append(self._client.download(url, f'{fil.directory}-{fil.name}', working_path=destination))
+            tasks.append(self._client.download(url, f'{fil.folder}-{fil.name}', working_path=destination))
         await asyncio.gather(*tasks)
         return media_stash
 
-    async def capture(self, resetafter=0):
+    async def capture(self, seconds=0):
         """Helper for capturing
         You have to set proper mode first
 
         Parameters
         ----------
-        resetafter: int
+        seconds: int
             Seconds after which shutter will be set to 0. (default 0 = disabled)
 
         Returns
         -------
         string
-            directory/filename of the last captured
+            folder/filename of the last captured
         """
         if await self.is_busy():
             raise CameraBusyError()
 
         await self.shutter(1)
-        if resetafter > 0:
-            await asyncio.sleep(resetafter)
+        if seconds > 0:
+            await asyncio.sleep(seconds)
             return await self.shutter(0)
 
         await asyncio.sleep(1)
@@ -296,7 +301,7 @@ class Camera:
         Returns
         -------
         string
-            directory/filename of the last captured
+            folder/filename of the last captured
         """
         if await self.is_busy():
             raise CameraBusyError()
@@ -319,5 +324,5 @@ class Camera:
         else:
             raise TypeError('Option is of wrong type')
 
-    async def delete_file(self, directory, fil):
-        return await self.command(Command.GPCAMERA_DELETE_FILE_ID, f'{directory}/{fil}')
+    async def delete_file(self, folder, fil):
+        return await self.command(Command.GPCAMERA_DELETE_FILE_ID, f'{folder}/{fil}')

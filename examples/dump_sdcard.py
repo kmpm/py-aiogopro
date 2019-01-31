@@ -8,9 +8,10 @@ async def run():
     print('connecting')
     print(await camera.connect())
 
-    print('download_all', await camera.download_all(destination='tmp/'))
-    print('delete', await camera.delete("all"))
+    print('downloading...')
+    print('download_all=', await camera.download_all(destination='tmp/'))
 
+    print('delete', await camera.delete("all"))
     await camera.quit()
 
 
