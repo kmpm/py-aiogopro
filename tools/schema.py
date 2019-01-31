@@ -92,6 +92,36 @@ def prefix_reserved(value, prefix):
     return value
 
 
+def render_other_mode(main_mode, others):
+    """
+    Parameters
+    main_mode : string
+        video, photo, ...
+    """
+    if len(others) == 0:
+        return []
+
+    mode = []
+    sections = []
+    settings = []
+    mode.append(f'\n\nclass {capitalize(main_mode)}Settings(object):')
+    sections.append(f'{T1}class Section(Enum):')
+    for i1 in range(len(others)):
+        sm = others[i1]
+        sections.append(f"{T2}{pythonify(sm.path_segment).upper()} = '{sm.id}'")
+
+        settings.append('')
+        settings.append(f"{T1}class {capitalize(sm.path_segment)}(Enum):")
+        prefix = ''
+        if sm.path_segment in SUBMODE_PREFIX:
+            prefix = SUBMODE_PREFIX[sm.path_segment]
+        for i2 in range(len(sm.options)):
+            o = sm.options[i2]
+            settings.append(f"{T2}{pythonify(prefix + o.display_name).upper()} = '{o.value}'")
+
+    return mode + sections + settings
+
+
 class SchemaType(object):
     def __init__(self, schema_version, version):
         self.schema_version = schema_version
@@ -181,7 +211,7 @@ def schema_pythonify(schema, filename):
     mode.append('class Mode(Enum):')
     submode = [f'\n\nclass SubMode(object):']
     for k, v in schema.modes.items():
-        mode.append(f"{T1}{pythonify(k)} = '{v.value}'")
+        mode.append(f"{T1}{pythonify(k).upper()} = '{v.value}'")
         if v.settings:
             # default settings
             defaults = [x for x in v.settings if x.path_segment == 'default_sub_mode']
@@ -192,21 +222,11 @@ def schema_pythonify(schema, filename):
                 if sm.path_segment in SUBMODE_PREFIX:
                     prefix = SUBMODE_PREFIX[sm.path_segment]
                 for o in sm.options:
-                    submode.append(f"{T2}{pythonify(prefix + o.display_name)} = '{o.value}'")
+                    submode.append(f"{T2}{pythonify(prefix + o.display_name).upper()} = '{o.value}'")
 
             # non default settings
             others = [x for x in v.settings if x.path_segment != 'default_sub_mode']
-            if len(others) > 0:
-                othermode.append(f'\n\nclass {capitalize(k)}(object):')
-                for sm in others:
-                    othermode.append(f"\n{T1}{capitalize(sm.path_segment).upper()} = '{sm.id}'")
-                    othermode.append(f"\n{T1}class {capitalize(sm.path_segment)}(Enum):")
-                    prefix = ''
-                    if sm.path_segment in SUBMODE_PREFIX:
-                        prefix = SUBMODE_PREFIX[sm.path_segment]
-                    for o in sm.options:
-                        othermode.append(f"{T2}{pythonify(prefix + o.display_name)} = '{o.value}'")
-
+            othermode += render_other_mode(k, others)
     mode = mode + submode + othermode
 
     # finalize

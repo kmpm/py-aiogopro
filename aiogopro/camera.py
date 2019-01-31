@@ -4,9 +4,9 @@ import asyncio
 
 from yarl import URL
 
-from aiogopro import utils, types, parsers
+from aiogopro import utils, types, parsers, constants
 from aiogopro.client import AsyncClient
-from aiogopro.infos import CameraInfo
+from aiogopro.types import CameraInfo
 from aiogopro.errors import CameraUnsupportedError, CameraBusyError
 from aiogopro.constants import Status, Command, Mode, SubMode
 from aiogopro.protocols import KeepAliveProtocol
@@ -86,6 +86,12 @@ class Camera:
         )
 
     async def get_info(self):
+        """
+        Returns
+        -------
+        CameraInfo
+
+        """
         if self._camera:
             return self._camera
 
@@ -128,6 +134,11 @@ class Camera:
         if value:
             return data['status'][value]
         return data
+
+    async def get_status_parsed(self):
+        stat = await self.get_status()
+        for k, v in stat['status']:
+            pass
 
     async def command(self, cmd, param=None, **kwargs):
         """Sends a command to camera
@@ -199,7 +210,7 @@ class Camera:
         value : '0' | '1'
             Shutter on or off
         """
-        print('shutter', value)
+        # print('shutter', value)
         if value == 1:
             return await self.command(Command.GPCAMERA_SHUTTER, value)
         if value == 0:
@@ -231,7 +242,6 @@ class Camera:
         while busy:
             asyncio.sleep(1)
             busy = await self.is_busy()
-
 
     async def dowload_media(self, path, destination=None):
         if await self.is_busy():

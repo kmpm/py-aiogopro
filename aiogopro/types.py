@@ -1,13 +1,4 @@
-from .utils import bytes_to_human
-
-
-def intif(value):
-    """Parse as int if string
-    """
-    try:
-        return int(value, 10)
-    except TypeError:
-        return value
+from .utils import bytes_to_human, intif
 
 
 class MediaEntry(object):
@@ -67,3 +58,21 @@ class StatusType(object):
 
         if len(kwargs) > 0:
             raise TypeError('Unexpected kwargs: {0}'.format(kwargs.keys()))
+
+
+class CameraInfo:
+    def __init__(self, camera_type, info, **kwargs):
+        self.camera_type = camera_type
+        # firmware_version is not optional
+        self.firmware_version = info.get('firmware_version')
+
+        for key in info:
+            setattr(self, key, info[key])
+        # for key, value in kwargs.items():
+        #     setattr(self, key, value)
+
+    # def __str__(self):
+    #     return "{0}".format(self.firmware_version)
+
+    def __repr__(self):
+        return f"<CameraInfo type:{self.camera_type}, firmware:{self.firmware_version}>"

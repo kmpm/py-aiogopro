@@ -1,7 +1,7 @@
 import asyncio
 from aiogopro import Camera
 
-from aiogopro.constants import MultiShot, Mode, SubMode
+from aiogopro.constants import MultiShotSettings, Mode, SubMode
 
 camera = Camera()
 TIMER = 10
@@ -10,8 +10,11 @@ TIMER = 10
 async def run():
     print('connecting')
     print(await camera.connect())
-    print('mode=', await camera.mode(Mode.multi_shot, SubMode.MultiShot.time_lapse_photo))
-    print('set_setting=', await camera.set_setting(MultiShot.TIMELAPSERATE, MultiShot.TimelapseRate.rate_1_photo_in_0_5_sec))
+    print('mode=', await camera.mode(Mode.MULTI_SHOT, SubMode.MultiShot.TIME_LAPSE_PHOTO))
+    print('set_setting=', await camera.set_setting(
+        MultiShotSettings.Section.TIMELAPSE_RATE,
+        MultiShotSettings.TimelapseRate.RATE_1_PHOTO_IN_0_5_SEC
+    ))
 
     print(f'capture for {TIMER} seconds')
     print('capture=', await camera.capture(TIMER))
@@ -19,8 +22,6 @@ async def run():
     print('avaliable', await camera.ensureAvailable())
     files = await camera.list_media()
     print('list_media=', [x.path for x in files])
-    path = await camera.get_last_media()
-    print('download_media', await camera.dowload_media(path))
 
     await camera.quit()
 

@@ -74,3 +74,12 @@ def get_value(data):
     if hasattr(data, 'value'):
         return data.value
     return data
+
+
+def intif(value):
+    """Parse as int if string
+    """
+    try:
+        return int(value, 10)
+    except TypeError:
+        return value
